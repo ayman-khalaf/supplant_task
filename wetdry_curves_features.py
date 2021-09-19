@@ -151,22 +151,22 @@ def compute(df, sensor_index, soil, ix_):
     return irr_event_features
 
 
-def save_wtdry_figure(df, soil):
+def save_wetdry_figure(df, soil, solar_radiation, accumulated_irrigation, hour):
     font_size = 18
     fig, axs = plt.subplots(4)
-    axs[0].plot(np.linspace(0, df[soil].shape[0], df[soil].shape[0]), df["2611__Solar_Radiation"], 'tab:red')
+    axs[0].plot(np.linspace(0, df[solar_radiation].shape[0], df[solar_radiation].shape[0]), df[solar_radiation], 'tab:red')
     axs[0].set_title('Solar Radiation', fontsize=font_size)
     axs[0].set_ylabel(ylabel='Watt', fontsize=font_size)
     axs[1].plot(np.linspace(0, df[soil].shape[0], df[soil].shape[0]), df[soil], 'tab:brown')
     axs[1].set_title('VMC Mineral Soil', fontsize=font_size)
     axs[1].set_ylabel(ylabel='Mineral', fontsize=font_size)
-    axs[2].plot(np.linspace(0, df[soil].shape[0], df[soil].shape[0]),
-                df["acc_Irr_on"], 'tab:blue')
+    axs[2].plot(np.linspace(0, df[accumulated_irrigation].shape[0], df[accumulated_irrigation].shape[0]),
+                df[accumulated_irrigation], 'tab:blue')
     axs[2].set_title('ACC Irr ON', fontsize=font_size)
     axs[2].set_ylabel(ylabel='Meter Cube', fontsize=font_size)
-    axs[3].plot(np.linspace(0, df[soil].shape[0], df[soil].shape[0]),
+    axs[3].plot(np.linspace(0, df[hour].shape[0], df[hour].shape[0]),
                 df["Hour"], 'tab:green')
-    axs[3].set_title('Hour', fontsize=font_size)
+    axs[3].set_title(hour, fontsize=font_size)
     axs[3].set_ylabel(ylabel='Hour', fontsize=font_size)
     axs[3].set_xlabel(xlabel='time', fontsize=font_size)
     figure = plt.gcf()
@@ -231,8 +231,7 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
                 dfi.to_csv(data_fn)
                 files.append(data_fn)
                 d = compute(dfi, sensor_index, soil, ix_)
-
-                save_wtdry_figure(dfi, soil)
+                save_wetdry_figure(dfi, soil, "2611__Solar_Radiation", "acc_Irr_on", "Hour")
                 ds.append(d)
         summary = pd.DataFrame(ds)
         junkcols = [col for col in summary if "Unnamed" in col]
