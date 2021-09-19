@@ -6,8 +6,8 @@ import json
 import pandas as pd
 import s3fs
 from scipy.optimize import curve_fit
-
 from collections import namedtuple
+import matplotlib.pyplot as plt
 
 
 def exponential(x, a, k):
@@ -28,7 +28,7 @@ def compute(df, sensor_index, soil, ix_):
     irr_event_features["start"] = df.index.min()
     # irr_event_features["datetime"] = irr_event_features["start"].value // 10 ** 9
     irr_event_features["end"] = df.index.max()
-    irr_event_features["six"] = sensor_index
+    irr_event_features["sensor_index"] = sensor_index
 
     datemin = pd.to_datetime(df.index.min())
     irr_event_features["hour"] = pd.to_datetime(datemin).hour
@@ -151,6 +151,29 @@ def compute(df, sensor_index, soil, ix_):
     return irr_event_features
 
 
+def save_wtdry_figure(df, soil):
+    font_size = 18
+    fig, axs = plt.subplots(4)
+    axs[0].plot(np.linspace(0, df[soil].shape[0], df[soil].shape[0]), df["2611__Solar_Radiation"], 'tab:red')
+    axs[0].set_title('Solar Radiation', fontsize=font_size)
+    axs[0].set_ylabel(ylabel='Watt', fontsize=font_size)
+    axs[1].plot(np.linspace(0, df[soil].shape[0], df[soil].shape[0]), df[soil], 'tab:brown')
+    axs[1].set_title('VMC Mineral Soil', fontsize=font_size)
+    axs[1].set_ylabel(ylabel='Mineral', fontsize=font_size)
+    axs[2].plot(np.linspace(0, df[soil].shape[0], df[soil].shape[0]),
+                df["acc_Irr_on"], 'tab:blue')
+    axs[2].set_title('ACC Irr ON', fontsize=font_size)
+    axs[2].set_ylabel(ylabel='Meter Cube', fontsize=font_size)
+    axs[3].plot(np.linspace(0, df[soil].shape[0], df[soil].shape[0]),
+                df["Hour"], 'tab:green')
+    axs[3].set_title('Hour', fontsize=font_size)
+    axs[3].set_ylabel(ylabel='Hour', fontsize=font_size)
+    axs[3].set_xlabel(xlabel='time', fontsize=font_size)
+    figure = plt.gcf()
+    figure.set_size_inches(32, 18)
+    print("saving wet_dry_features.png")
+    plt.savefig("wet_dry_features.png", bbox_inches='tight')
+
 def wetdry_features(config, features_file: str, bucket: str, force: int):# -> NamedTuple["WetDryFeatures", ("summary", str), ("files", list[str])]:
     """Compute features for wetting-drying intervals
 
@@ -165,7 +188,6 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
         bucket: root artifact folder
         force:  force recompute even if output file already exists
     """
-
     config = json.loads(config)
     grower_id = config["grower_id"]
     plot_id = config["plot_id"]
@@ -181,16 +203,13 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
         f"{bucket}\\{grower_id}-{plot_id}\\{iplant_id}\\wetdry-groups-summary.csv"
     )
 
-    print(summary_file)
     if os.path.isfile(features_file):
-        print(features_file)
         data = pd.read_csv(features_file)
         ishape = data.shape
         data.reset_index(drop=False, inplace=True)
         data.drop_duplicates("datetime", keep="last", inplace=True)
         data.set_index("datetime", inplace=True)
         oshape = data.shape
-        print(data.shape)
         if ishape == oshape:
             print(f"info:wetdry_features:index duplicates:0:{features_file}")
         else:
@@ -212,6 +231,8 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
                 dfi.to_csv(data_fn)
                 files.append(data_fn)
                 d = compute(dfi, sensor_index, soil, ix_)
+
+                save_wtdry_figure(dfi, soil)
                 ds.append(d)
         summary = pd.DataFrame(ds)
         junkcols = [col for col in summary if "Unnamed" in col]
@@ -220,8 +241,6 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
             summary.drop(columns=junkcols, inplace=True)
         if os.path.isfile(summary_file):
             summary_old = pd.read_csv(summary_file)
-            for col in summary_old:
-                print(col)
             junkcols = [col for col in summary_old if "Unnamed" in col]
             if junkcols:
                 print(f"info:wetdry_features:found junk columns:{len(junkcols)}")
