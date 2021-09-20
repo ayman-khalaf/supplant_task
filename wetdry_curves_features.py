@@ -30,11 +30,11 @@ def compute(df, sensor_index, soil, ix_):
     irr_event_features["end"] = df.index.max()
     irr_event_features["sensor_index"] = sensor_index
 
-    datemin = pd.to_datetime(df.index.min())
-    irr_event_features["hour"] = pd.to_datetime(datemin).hour
-    irr_event_features["dayofyear"] = pd.to_datetime(datemin).dayofyear
-    irr_event_features["month"] = pd.to_datetime(datemin).month
-    irr_event_features["year"] = pd.to_datetime(datemin).year
+    date_min = pd.to_datetime(df.index.min())
+    irr_event_features["hour"] = date_min.hour
+    irr_event_features["dayofyear"] = date_min.dayofyear
+    irr_event_features["month"] = date_min.month
+    irr_event_features["year"] = date_min.year
 
     try:
         irr_event_features["on_time"] = df.dt_Irr_on.max()
