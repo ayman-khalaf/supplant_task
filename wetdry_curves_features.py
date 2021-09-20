@@ -221,19 +221,7 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
     summary_file = os.path.join(result_dir, wetdry_groups_summary_file)
 
     if os.path.isfile(features_file):
-        data = pd.read_csv(features_file)
-        ishape = data.shape
-        data.reset_index(drop=False, inplace=True)
-        data.drop_duplicates("datetime", keep="last", inplace=True)
-        data.set_index("datetime", inplace=True)
-        oshape = data.shape
-        if ishape == oshape:
-            print(f"info:wetdry_features:index duplicates:0:{features_file}")
-        else:
-            data.to_parquet(features_file, index=True)
-            print(
-                f"info:wetdry_features:index duplicates:{ishape[0] - oshape[0]}:refeshing cache:{features_file}"
-            )
+        data = prepare_data(features_file)
         gdf = list(data.groupby(groupings))
         files = []
         ds = []
@@ -247,21 +235,42 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
                 d = compute(dfi, sensor_index, soil, ix_)
                 save_wetdry_figure(dfi, soil, "2611__Solar_Radiation", "acc_Irr_on", "Hour")
                 ds.append(d)
-        summary = pd.DataFrame(ds)
-        junkcols = [col for col in summary if "Unnamed" in col]
-        if junkcols:
-            print(f"info:wetdry_features:found junk columns:{len(junkcols)}")
-            summary.drop(columns=junkcols, inplace=True)
-        if os.path.isfile(summary_file):
-            summary_old = pd.read_csv(summary_file)
-            junkcols = [col for col in summary_old if "Unnamed" in col]
-            if junkcols:
-                print(f"info:wetdry_features:found junk columns:{len(junkcols)}")
-                summary_old.drop(columns=junkcols, inplace=True)
-            summary = pd.concat([summary_old, summary], axis=0)
-        summary.to_csv(summary_file)
+        save_summary(ds, summary_file)
         return output(summary_file, files)
     else:
         return output(summary_file, [])
+
+
+def save_summary(ds, summary_file):
+    summary = pd.DataFrame(ds)
+    junkcols = [col for col in summary if "Unnamed" in col]
+    if junkcols:
+        print(f"info:wetdry_features:found junk columns:{len(junkcols)}")
+        summary.drop(columns=junkcols, inplace=True)
+    if os.path.isfile(summary_file):
+        summary_old = pd.read_csv(summary_file)
+        junkcols = [col for col in summary_old if "Unnamed" in col]
+        if junkcols:
+            print(f"info:wetdry_features:found junk columns:{len(junkcols)}")
+            summary_old.drop(columns=junkcols, inplace=True)
+        summary = pd.concat([summary_old, summary], axis=0)
+    summary.to_csv(summary_file)
+
+
+def prepare_data(features_file):
+    data = pd.read_csv(features_file)
+    ishape = data.shape
+    data.reset_index(drop=False, inplace=True)
+    data.drop_duplicates("datetime", keep="last", inplace=True)
+    data.set_index("datetime", inplace=True)
+    oshape = data.shape
+    if ishape == oshape:
+        print(f"info:wetdry_features:index duplicates:0:{features_file}")
+    else:
+        data.to_parquet(features_file, index=True)
+        print(
+            f"info:wetdry_features:index duplicates:{ishape[0] - oshape[0]}:refeshing cache:{features_file}"
+        )
+    return data
 
 
