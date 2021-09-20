@@ -216,9 +216,9 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
 
     groupings = ["Irr_start"]
     output = namedtuple("WetDryFeatures", ["summary", "files"])
-    summary_file = (
-        f"{bucket}\\{grower_id}-{plot_id}\\{iplant_id}\\wetdry-groups-summary.csv"
-    )
+    wetdry_groups_summary_file = "wetdry-groups-summary.csv"
+    result_dir = os.path.join(bucket, f"{grower_id}-{plot_id}", iplant_id)
+    summary_file = os.path.join(result_dir, wetdry_groups_summary_file)
 
     if os.path.isfile(features_file):
         data = pd.read_csv(features_file)
@@ -239,8 +239,7 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
         ds = []
         for (ixi, dfi) in gdf:
             ix_ = ixi  # .value // 10 ** 9
-            path = f"{bucket}\\{grower_id}-{plot_id}\\{iplant_id}\\wetdry"
-            data_fn = f"{path}\\group.csv"
+            data_fn = os.path.join(result_dir, "wetdry", "group.csv")
             if not os.path.isfile(data_fn) or force == 1:
                 print(data_fn)
                 dfi.to_csv(data_fn)
