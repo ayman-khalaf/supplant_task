@@ -25,42 +25,46 @@ def compute(df, sensor_index, soil, ix_):
         of the grouped dataframe.
         """
     irr_event_features = {}
-    irr_event_features["start"] = df.index.min()
+    start_time = df.index.min()
+    irr_event_features["start"] = start_time
     # irr_event_features["datetime"] = irr_event_features["start"].value // 10 ** 9
     irr_event_features["end"] = df.index.max()
     irr_event_features["sensor_index"] = sensor_index
 
-    date_min = pd.to_datetime(df.index.min())
+    date_min = pd.to_datetime(start_time)
     irr_event_features["hour"] = date_min.hour
     irr_event_features["dayofyear"] = date_min.dayofyear
     irr_event_features["month"] = date_min.month
     irr_event_features["year"] = date_min.year
 
+    on_time = df.dt_Irr_on.max()
     try:
-        irr_event_features["on_time"] = df.dt_Irr_on.max()
+        irr_event_features["on_time"] = on_time
     except:
         irr_event_features["on_time"] = pd.NA
 
+    off_time = df.dt_Irr_off.max()
     try:
-        irr_event_features["off_time"] = df.dt_Irr_off.max()
+        irr_event_features["off_time"] = off_time
     except:
         irr_event_features["off_time"] = pd.NA
 
+    start_sm_irr_on = df[soil].iloc[0]
     try:
-        irr_event_features["start_sm_irr_on"] = df[soil].iloc[0]
+        irr_event_features["start_sm_irr_on"] = start_sm_irr_on
     except:
         irr_event_features["start_sm_irr_on"] = pd.NA
 
     try:
         irr_event_features["end_sm_irr_on"] = df[soil].iloc[
-            int(df.dt_Irr_on.max() * 2)
+            int(on_time * 2)
         ]
     except:
         irr_event_features["end_sm_irr_on"] = pd.NA
 
     try:
         irr_event_features["start_sm_irr_off"] = df[soil].iloc[
-            int(df.dt_Irr_on.max() * 2) + 1
+            int(on_time * 2) + 1
             ]
     except:
         irr_event_features["start_sm_irr_off"] = pd.NA
@@ -73,7 +77,7 @@ def compute(df, sensor_index, soil, ix_):
 
     try:
         irr_event_features["dsm_irr_on"] = (
-                df[soil].iloc[int(df.dt_Irr_on.max() * 2)] - df[soil].iloc[0]
+                df[soil].iloc[int(on_time * 2)] - start_sm_irr_on
         )
     except:
         irr_event_features["dsm_irr_on"] = pd.NA
@@ -81,14 +85,14 @@ def compute(df, sensor_index, soil, ix_):
     try:
         irr_event_features["dsm_irr_off"] = (
                 df[soil].iloc[number_of_rows - 1]
-                - df[soil].iloc[int(df.dt_Irr_on.max() * 2) + 1]
+                - df[soil].iloc[int(on_time * 2) + 1]
         )
     except:
         irr_event_features["dsm_irr_off"] = pd.NA
 
     try:
         irr_event_features["dsm"] = (
-                df[soil].iloc[number_of_rows - 1] - df[soil].iloc[0]
+                df[soil].iloc[number_of_rows - 1] - start_sm_irr_on
         )
     except:
         irr_event_features["dsm"] = pd.NA
@@ -130,15 +134,15 @@ def compute(df, sensor_index, soil, ix_):
     try:
         irr_event_features["linslope_dsm_off"] = (
                                                          df[soil].iloc[number_of_rows - 1]
-                                                         - df[soil].iloc[int(df.dt_Irr_on.max() * 2) + 1]
-                                                 ) / df.dt_Irr_off.max()
+                                                         - df[soil].iloc[int(on_time * 2) + 1]
+                                                 ) / off_time
     except:
         irr_event_features["linslope_dsm_off"] = pd.NA
     try:
         irr_event_features["linslope_dsm_on"] = (
-                                                        df[soil].iloc[int(df.dt_Irr_on.max() * 2)] - df[soil].iloc[
+                                                        df[soil].iloc[int(on_time * 2)] - df[soil].iloc[
                                                     0]
-                                                ) / df.dt_Irr_on.max()
+                                                ) / on_time
     except:
         irr_event_features["linslope_dsm_on"] = pd.NA
 
