@@ -179,6 +179,15 @@ def save_wetdry_figure(df, soil, solar_radiation, accumulated_irrigation, hour):
     print("saving wet_dry_features.png")
     plt.savefig("wet_dry_features.png", bbox_inches='tight')
 
+
+def read_config(config):
+    grower_id = config["grower_id"]
+    plot_id = config["plot_id"]
+    iplant_id = config["iplant_id"]
+    soil = config["soil_moisture_sensor"]
+    return grower_id, iplant_id, plot_id, soil
+
+
 def wetdry_features(config, features_file: str, bucket: str, force: int):# -> NamedTuple["WetDryFeatures", ("summary", str), ("files", list[str])]:
     """Compute features for wetting-drying intervals
 
@@ -193,11 +202,14 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
         bucket: root artifact folder
         force:  force recompute even if output file already exists
     """
-    config = json.load(config)
-    grower_id = config["grower_id"]
-    plot_id = config["plot_id"]
-    iplant_id = config["iplant_id"]
-    soil = config["soil_moisture_sensor"]
+    if not os.path.isfile(config):
+        raise Exception(f"file {config} is not found.")
+
+    if not os.path.isdir(bucket):
+        raise Exception(f"file {bucket} is not found.")
+
+    config = json.load(open(config))
+    grower_id, iplant_id, plot_id, soil = read_config(config)
     sensor_index = f"{grower_id}:{plot_id}:{iplant_id}"
 
     # s3 = s3fs.S3FileSystem()
@@ -252,3 +264,5 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
         return output(summary_file, files)
     else:
         return output(summary_file, [])
+
+
