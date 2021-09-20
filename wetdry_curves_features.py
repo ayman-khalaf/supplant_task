@@ -193,7 +193,7 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):# -> Na
         bucket: root artifact folder
         force:  force recompute even if output file already exists
     """
-    config = json.loads(config)
+    config = json.load(config)
     grower_id = config["grower_id"]
     plot_id = config["plot_id"]
     iplant_id = config["iplant_id"]
