@@ -167,6 +167,10 @@ def save_wetdry_figure(df, soil, solar_radiation, accumulated_irrigation, hour):
 
 
 def read_config(config):
+    config_file = open(config)
+    config = json.load(config_file)
+    config_file.close()
+
     grower_id = config["grower_id"]
     plot_id = config["plot_id"]
     iplant_id = config["iplant_id"]
@@ -194,9 +198,7 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> 
     if not os.path.isdir(bucket):
         raise Exception(f"file {bucket} is not found.")
 
-    config_file = open(config)
-    config = json.load(config_file)
-    config_file.close()
+
     grower_id, iplant_id, plot_id, soil = read_config(config)
     sensor_index = f"{grower_id}:{plot_id}:{iplant_id}"
 

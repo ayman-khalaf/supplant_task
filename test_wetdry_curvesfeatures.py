@@ -3,6 +3,7 @@ import math
 from wetdry_curves_features import linear
 from wetdry_curves_features import exponential
 from wetdry_curves_features import wetdry_features
+from wetdry_curves_features import read_config
 
 
 class TestWetDryCurvesFeatures(unittest.TestCase):
@@ -45,6 +46,12 @@ class TestWetDryCurvesFeatures(unittest.TestCase):
         result = wetdry_features(config_file_path, data_file_path, result_file_path, 1)
         self.assertEqual(len(result.files), 2)
 
+    def test_read_config(self):
+        grower_id, iplant_id, plot_id, soil = read_config("config.json")
+        self.assertEqual(grower_id, "grower_1")
+        self.assertEqual(iplant_id, "iplant_1")
+        self.assertEqual(plot_id, "plot_1")
+        self.assertEqual(soil, "4025__VWC_Mineral_Soil")
 
 
 if __name__ == '__main__':
