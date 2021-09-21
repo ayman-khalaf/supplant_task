@@ -194,7 +194,9 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> 
     if not os.path.isdir(bucket):
         raise Exception(f"file {bucket} is not found.")
 
-    config = json.load(open(config))
+    config_file = open(config)
+    config = json.load(config_file)
+    config_file.close()
     grower_id, iplant_id, plot_id, soil = read_config(config)
     sensor_index = f"{grower_id}:{plot_id}:{iplant_id}"
 
@@ -211,9 +213,11 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> 
         gdf = list(data.groupby(groupings))
         files = []
         ds = []
+        i = 0
         for (ixi, dfi) in gdf:
-            ix_ = ixi  # .value // 10 ** 9
-            data_fn = os.path.join(result_dir, "wetdry", "group.csv")
+            ix_ = ixi#.value // 10 ** 9
+            data_fn = os.path.join(result_dir, "wetdry", f"group_{i}.csv")
+            i += 1
             if not os.path.isfile(data_fn) or force == 1:
                 print(data_fn)
                 dfi.to_csv(data_fn)
