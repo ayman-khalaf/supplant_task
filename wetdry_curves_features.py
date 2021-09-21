@@ -38,55 +38,37 @@ def compute(df, sensor_index, soil, ix_):
     irr_event_features["year"] = date_min.year
 
     on_time = df.dt_Irr_on.max()
-    try:
-        irr_event_features["on_time"] = on_time
-    except:
-        irr_event_features["on_time"] = pd.NA
-
+    irr_event_features["on_time"] = on_time
     off_time = df.dt_Irr_off.max()
-    try:
-        irr_event_features["off_time"] = off_time
-    except:
-        irr_event_features["off_time"] = pd.NA
+    irr_event_features["off_time"] = off_time
+    number_of_rows = df.shape[0]
+    start_sm_irr_on = pd.NA
+    if number_of_rows > 0:
+        start_sm_irr_on = df[soil].iloc[0]
+    irr_event_features["start_sm_irr_on"] = start_sm_irr_on
 
-    start_sm_irr_on = df[soil].iloc[0]
-    try:
-        irr_event_features["start_sm_irr_on"] = start_sm_irr_on
-    except:
-        irr_event_features["start_sm_irr_on"] = pd.NA
-
-    try:
-        irr_event_features["end_sm_irr_on"] = df[soil].iloc[
-            int(on_time * 2)
-        ]
-    except:
+    if number_of_rows > on_time * 2:
+        irr_event_features["end_sm_irr_on"] = df[soil].iloc[int(on_time * 2)]
+    else:
         irr_event_features["end_sm_irr_on"] = pd.NA
 
-    try:
-        irr_event_features["start_sm_irr_off"] = df[soil].iloc[
-            int(on_time * 2) + 1
-            ]
-    except:
+    if number_of_rows > on_time * 2 + 1:
+        irr_event_features["start_sm_irr_off"] = df[soil].iloc[int(on_time * 2) + 1]
+    else:
         irr_event_features["start_sm_irr_off"] = pd.NA
 
-    number_of_rows = df.shape[0]
-    try:
+    if number_of_rows > 0:
         irr_event_features["end_sm_irr_off"] = df[soil].iloc[number_of_rows - 1]
-    except:
+    else:
         irr_event_features["end_sm_irr_off"] = pd.NA
 
     try:
-        irr_event_features["dsm_irr_on"] = (
-                df[soil].iloc[int(on_time * 2)] - start_sm_irr_on
-        )
+        irr_event_features["dsm_irr_on"] = (df[soil].iloc[int(on_time * 2)] - start_sm_irr_on)
     except:
         irr_event_features["dsm_irr_on"] = pd.NA
 
     try:
-        irr_event_features["dsm_irr_off"] = (
-                df[soil].iloc[number_of_rows - 1]
-                - df[soil].iloc[int(on_time * 2) + 1]
-        )
+        irr_event_features["dsm_irr_off"] = (df[soil].iloc[number_of_rows - 1] - df[soil].iloc[int(on_time * 2) + 1])
     except:
         irr_event_features["dsm_irr_off"] = pd.NA
 
@@ -188,7 +170,7 @@ def read_config(config):
     return grower_id, iplant_id, plot_id, soil
 
 
-def wetdry_features(config, features_file: str, bucket: str, force: int):# -> NamedTuple["WetDryFeatures", ("summary", str), ("files", list[str])]:
+def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> NamedTuple["WetDryFeatures", ("summary", str), ("files", list[str])]:
     """Compute features for wetting-drying intervals
 
     A wetting-drying interval is the time period between each irrigation event,
@@ -272,5 +254,3 @@ def prepare_data(features_file):
             f"info:wetdry_features:index duplicates:{ishape[0] - oshape[0]}:refeshing cache:{features_file}"
         )
     return data
-
-
