@@ -22,6 +22,7 @@ def exponential(x, a, k):
     """
     return a * np.exp(x * k)
 
+
 def linear(x, m, b):
     """
     linear function which is a polynomial function of degree zero or one. which is simply a straight line
@@ -75,28 +76,34 @@ def compute(df, sensor_index, soil, event):
         start_sm_irr_on = df[soil].iloc[0]
     irr_event_features["start_sm_irr_on"] = start_sm_irr_on
 
+    # since records in dataframe is calculated each half hour so the index of end time of irrigation
+    # will be on_time * 2, however this will fail if we change the time of recording data
+    # TODO(Ayman): make fix bug that happens when time of recording data is not each half hour
+    end_sm_irr_on = int(on_time * 2)
     if number_of_rows > on_time * 2 and soil_in_df:
-        irr_event_features["end_sm_irr_on"] = df[soil].iloc[int(on_time * 2)]
+        irr_event_features["end_sm_irr_on"] = df[soil].iloc[end_sm_irr_on]
     else:
         irr_event_features["end_sm_irr_on"] = pd.NA
 
     if number_of_rows > on_time * 2 + 1 and soil_in_df:
-        irr_event_features["start_sm_irr_off"] = df[soil].iloc[int(on_time * 2) + 1]
+        # start of irrigation off will equal to end of irrigation on plus one
+        irr_event_features["start_sm_irr_off"] = df[soil].iloc[end_sm_irr_on + 1]
     else:
         irr_event_features["start_sm_irr_off"] = pd.NA
 
     if number_of_rows > 0 and soil_in_df:
+        # end of irrigation off will be the last row
         irr_event_features["end_sm_irr_off"] = df[soil].iloc[number_of_rows - 1]
     else:
         irr_event_features["end_sm_irr_off"] = pd.NA
 
     try:
-        irr_event_features["dsm_irr_on"] = (df[soil].iloc[int(on_time * 2)] - start_sm_irr_on)
+        irr_event_features["dsm_irr_on"] = (df[soil].iloc[end_sm_irr_on] - start_sm_irr_on)
     except:
         irr_event_features["dsm_irr_on"] = pd.NA
 
     try:
-        irr_event_features["dsm_irr_off"] = (df[soil].iloc[number_of_rows - 1] - df[soil].iloc[int(on_time * 2) + 1])
+        irr_event_features["dsm_irr_off"] = (df[soil].iloc[number_of_rows - 1] - df[soil].iloc[end_sm_irr_on + 1])
     except:
         irr_event_features["dsm_irr_off"] = pd.NA
 
@@ -114,7 +121,9 @@ def compute(df, sensor_index, soil, event):
     except:
         irr_event_features["water_meter_avg_flow"] = pd.NA
 
+    # data when irrigation is off
     xoff = df.query("dt_Irr_off>=0")
+    # data when irrigation is on
     xon = df.query("dt_Irr_off==0")
     if soil_in_df:
         irr_event_features["mean_off"] = xoff[soil].mean()
@@ -144,13 +153,13 @@ def compute(df, sensor_index, soil, event):
     try:
         irr_event_features["linslope_dsm_off"] = (
                                                          df[soil].iloc[number_of_rows - 1]
-                                                         - df[soil].iloc[int(on_time * 2) + 1]
+                                                         - df[soil].iloc[end_sm_irr_on + 1]
                                                  ) / off_time
     except:
         irr_event_features["linslope_dsm_off"] = pd.NA
     try:
         irr_event_features["linslope_dsm_on"] = (
-                                                        df[soil].iloc[int(on_time * 2)] - df[soil].iloc[
+                                                        df[soil].iloc[end_sm_irr_on] - df[soil].iloc[
                                                     0]
                                                 ) / on_time
     except:
@@ -220,7 +229,8 @@ def read_config(config):
     return grower_id, iplant_id, plot_id, soil
 
 
-def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> NamedTuple["WetDryFeatures", ("summary", str), ("files", list[str])]:
+def wetdry_features(config, features_file: str, bucket: str,
+                    force: bool):  # -> NamedTuple["WetDryFeatures", ("summary", str), ("files", list[str])]:
     """
     Compute features for wetting-drying intervals
     A wetting-drying interval is the time period between each irrigation event,
@@ -244,7 +254,7 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> 
     sensor_index = f"{grower_id}:{plot_id}:{iplant_id}"
 
     # s3 = s3fs.S3FileSystem()
-
+    # list of columns used in grouping
     groupings = ["Irr_start"]
     output = namedtuple("WetDryFeatures", ["summary", "files"])
     wetdry_groups_summary_file = "wetdry-groups-summary.csv"
@@ -258,14 +268,15 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> 
         ds = []
         i = 0
         for (ixi, dfi) in gdf:
-            ix_ = ixi#.value // 10 ** 9
             data_fn = os.path.join(result_dir, "wetdry", f"group_{i}.csv")
             i += 1
-            if not os.path.isfile(data_fn) or force == 1:
+
+            # compute only if file didn't exist before, or force is equal to 1
+            if not os.path.isfile(data_fn) or force:
                 print(data_fn)
                 dfi.to_csv(data_fn)
                 files.append(data_fn)
-                d = compute(dfi, sensor_index, soil, ix_)
+                d = compute(dfi, sensor_index, soil, ixi)
                 save_wetdry_figure(dfi, soil, "2611__Solar_Radiation", "acc_Irr_on", "Hour")
                 ds.append(d)
         save_summary(ds, summary_file)
@@ -283,10 +294,12 @@ def save_summary(ds, summary_file):
 
     """
     summary = pd.DataFrame(ds)
+    # remove Unnamed columns in the dataframe
     junkcols = [col for col in summary if "Unnamed" in col]
     if junkcols:
         print(f"info:wetdry_features:found junk columns:{len(junkcols)}")
         summary.drop(columns=junkcols, inplace=True)
+    # if file summary already exists then read it and combine it with the new summary output
     if os.path.isfile(summary_file):
         summary_old = pd.read_csv(summary_file)
         junkcols = [col for col in summary_old if "Unnamed" in col]
@@ -307,7 +320,9 @@ def prepare_data(features_file):
     data = pd.read_csv(features_file)
     ishape = data.shape
     data.reset_index(drop=False, inplace=True)
+    # remove duplicate rows depending on datetime column, keep the last value if duplicates exists
     data.drop_duplicates("datetime", keep="last", inplace=True)
+    # change index of dataframe to be datetime column
     data.set_index("datetime", inplace=True)
     oshape = data.shape
     if ishape == oshape:
