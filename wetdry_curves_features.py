@@ -167,10 +167,7 @@ def compute(df, sensor_index, soil, event):
 
     ls = irr_event_features.get("linslope_off_est", 1.0)
     es = irr_event_features.get("expdecay_off_est", 1.0)
-    if (ls > 0.0) or (es > 0.0):
-        irr_event_features["neg_slope"] = False
-    else:
-        irr_event_features["neg_slope"] = True
+    irr_event_features["neg_slope"] = not ((ls > 0.0) or (es > 0.0))
 
     return irr_event_features
 
