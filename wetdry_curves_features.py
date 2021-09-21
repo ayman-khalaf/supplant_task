@@ -36,10 +36,13 @@ def compute(df, sensor_index, soil, ix_):
     irr_event_features["dayofyear"] = date_min.dayofyear
     irr_event_features["month"] = date_min.month
     irr_event_features["year"] = date_min.year
-
-    on_time = df.dt_Irr_on.max()
+    on_time = 0
+    if "dt_Irr_on" in df.columns:
+        on_time = df.dt_Irr_on.max()
     irr_event_features["on_time"] = on_time
-    off_time = df.dt_Irr_off.max()
+    off_time = 0
+    if "dt_Irr_off" in df.columns:
+        off_time = df.dt_Irr_off.max()
     irr_event_features["off_time"] = off_time
     number_of_rows = df.shape[0]
     start_sm_irr_on = pd.NA
@@ -89,11 +92,11 @@ def compute(df, sensor_index, soil, ix_):
 
     xoff = df.query("dt_Irr_off>=0")
     xon = df.query("dt_Irr_off==0")
-    irr_event_features["mean_off"] = xoff[soil].mean()
-    irr_event_features["mean_on"] = xon[soil].mean()
-    irr_event_features["std_off"] = xoff[soil].std()
-    irr_event_features["std_on"] = xon[soil].std()
-
+    if soil_in_df:
+        irr_event_features["mean_off"] = xoff[soil].mean()
+        irr_event_features["mean_on"] = xon[soil].mean()
+        irr_event_features["std_off"] = xoff[soil].std()
+        irr_event_features["std_on"] = xon[soil].std()
     x_array = df.query("dt_Irr_off>0")["dt_Irr_off"].values
     y_array = df.query("dt_Irr_off>0")[soil].values
     try:
