@@ -11,19 +11,43 @@ import matplotlib.pyplot as plt
 
 
 def exponential(x, a, k):
+    """
+    exponential function
+
+    :param x
+    :param a scale value of the function
+    :param k degree of the exponential function
+
+    :return a * np.exp(x * k)
+    """
     return a * np.exp(x * k)
 
-
 def linear(x, m, b):
+    """
+    linear function which is a polynomial function of degree zero or one. which is simply a straight line
+
+    :param x
+    :param m slope of the line
+    :param b offset of the line
+
+    :return m * x + b
+    """
     return m * x + b
 
 
-def compute(df, sensor_index, soil, ix_):
-    """compute features for one irtrigation interval
+def compute(df, sensor_index, soil, event):
+    """
+    compute features for one irrigation interval which is applied to each dataframe
+    of the grouped dataframe.
 
-        This is an internal function to be applied to each dataframe
-        of the grouped dataframe.
-        """
+    :param df pandas dataframe which will be processed
+    :param sensor_index string combined as the following from grower_id, plot_id, and iplant_id"
+    :param soil mineral sensor name
+    :param event irrigation start time
+
+
+    :return irr_event_features which is dictionary containing the results of the calculations on the the given dataframe
+    """
     irr_event_features = {}
     start_time = df.index.min()
     irr_event_features["start"] = start_time
@@ -105,7 +129,7 @@ def compute(df, sensor_index, soil, ix_):
         perr_linear = np.sqrt(np.diag(pcov_linear))
         irr_event_features["linslope_off_err_est"] = perr_linear[0]
     except Exception as e:
-        print(f"error:wetdry_features:linear_curve_fit:{sensor_index}:event:{ix_}:{str(e)}")
+        print(f"error:wetdry_features:linear_curve_fit:{sensor_index}:event:{event}:{str(e)}")
     try:
         popt_exponential, pcov_exponential = curve_fit(
             exponential, x_array, y_array, p0=[0, 0]
@@ -143,6 +167,17 @@ def compute(df, sensor_index, soil, ix_):
 
 
 def save_wetdry_figure(df, soil, solar_radiation, accumulated_irrigation, hour):
+    """
+    function that plots the relation between soil, solar_radiation accumulated_irrigation and time.
+
+    :param df: pandas dataframe which will be processed
+    :param soil: soil mineral sensor name
+    :param solar_radiation: solar radiation sensor name
+    :param accumulated_irrigation: name of accumulated irrigation column in df
+    :param hour: name of hour column in df
+
+    :return: path of image plotted
+    """
     font_size = 18
     fig, axs = plt.subplots(4)
     number_of_rows = df[solar_radiation].shape[0]
@@ -165,8 +200,15 @@ def save_wetdry_figure(df, soil, solar_radiation, accumulated_irrigation, hour):
     print("saving wet_dry_features.png")
     plt.savefig("wet_dry_features.png", bbox_inches='tight')
 
+    return "saving wet_dry_features.png"
+
 
 def read_config(config):
+    """
+
+    :param config: path of json config file
+    :return: values read from json file as the following grower_id, iplant_id, plot_id, soil
+    """
     config_file = open(config)
     config = json.load(config_file)
     config_file.close()
@@ -179,25 +221,24 @@ def read_config(config):
 
 
 def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> NamedTuple["WetDryFeatures", ("summary", str), ("files", list[str])]:
-    """Compute features for wetting-drying intervals
-
+    """
+    Compute features for wetting-drying intervals
     A wetting-drying interval is the time period between each irrigation event,
     starting with and including the irrigation event itself and ending just as
     the next irrigation event begins.
 
-    Args:
-        config:  config from preceding steps, passed as a json string
-        features_file: irrigation features_file, artifact cache filename.  This
-                       is the file from which the features are derived.
-        bucket: root artifact folder
-        force:  force recompute even if output file already exists
+    :param config  config from preceding steps, passed as a json string
+    :param features_file: irrigation features_file, artifact cache filename. This is the file from which the features are derived.
+    :param bucket root artifact folder
+    :param force  force recompute even if output file already exists
+
+    :return summary of each wetting-drying interval
     """
     if not os.path.isfile(config):
         raise Exception(f"file {config} is not found.")
 
     if not os.path.isdir(bucket):
         raise Exception(f"file {bucket} is not found.")
-
 
     grower_id, iplant_id, plot_id, soil = read_config(config)
     sensor_index = f"{grower_id}:{plot_id}:{iplant_id}"
@@ -234,6 +275,13 @@ def wetdry_features(config, features_file: str, bucket: str, force: int):  # -> 
 
 
 def save_summary(ds, summary_file):
+    """
+    saves the summary output of wetdry_features function as a csv file, if the file already exists it reads the file
+    and combines it with the new summary ds
+    :param ds: pandas dataframe contains summary output of wetdry_features function
+    :param summary_file: path to summary file
+
+    """
     summary = pd.DataFrame(ds)
     junkcols = [col for col in summary if "Unnamed" in col]
     if junkcols:
@@ -250,6 +298,12 @@ def save_summary(ds, summary_file):
 
 
 def prepare_data(features_file):
+    """
+    read features_file as pandas dataframe and remove duplicated rows and if there is duplicated rows remove them and
+    save new dataframe to the same file
+    :param features_file: path to features_file
+    :return: pandas dataframe of features
+    """
     data = pd.read_csv(features_file)
     ishape = data.shape
     data.reset_index(drop=False, inplace=True)
@@ -259,7 +313,7 @@ def prepare_data(features_file):
     if ishape == oshape:
         print(f"info:wetdry_features:index duplicates:0:{features_file}")
     else:
-        data.to_parquet(features_file, index=True)
+        data.to_csv(features_file, index=True)
         print(
             f"info:wetdry_features:index duplicates:{ishape[0] - oshape[0]}:refeshing cache:{features_file}"
         )
