@@ -43,21 +43,22 @@ def compute(df, sensor_index, soil, ix_):
     irr_event_features["off_time"] = off_time
     number_of_rows = df.shape[0]
     start_sm_irr_on = pd.NA
-    if number_of_rows > 0:
+    soil_in_df = soil in df.columns
+    if number_of_rows > 0 and soil_in_df:
         start_sm_irr_on = df[soil].iloc[0]
     irr_event_features["start_sm_irr_on"] = start_sm_irr_on
 
-    if number_of_rows > on_time * 2:
+    if number_of_rows > on_time * 2 and soil_in_df:
         irr_event_features["end_sm_irr_on"] = df[soil].iloc[int(on_time * 2)]
     else:
         irr_event_features["end_sm_irr_on"] = pd.NA
 
-    if number_of_rows > on_time * 2 + 1:
+    if number_of_rows > on_time * 2 + 1 and soil_in_df:
         irr_event_features["start_sm_irr_off"] = df[soil].iloc[int(on_time * 2) + 1]
     else:
         irr_event_features["start_sm_irr_off"] = pd.NA
 
-    if number_of_rows > 0:
+    if number_of_rows > 0 and soil_in_df:
         irr_event_features["end_sm_irr_off"] = df[soil].iloc[number_of_rows - 1]
     else:
         irr_event_features["end_sm_irr_off"] = pd.NA
